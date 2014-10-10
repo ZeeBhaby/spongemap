@@ -8,24 +8,24 @@
     <meta name="author" content="">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
     <link rel="stylesheet" href="http://libs.cartocdn.com/cartodb.js/v3/themes/css/cartodb.css" />
-    <link rel="stylesheet" href="//code.jquery.com/ui/1.11.0/themes/smoothness/jquery-ui.css">
-    <link rel="stylesheet" href="{{ STATIC_URL }}css/dark-theme.css">
-    <link rel="stylesheet" href="{{ STATIC_URL }}css/makeitresponsive.css">
-    <link rel="stylesheet" href="{{ STATIC_URL }}css/spongemap.css" />
+    <link rel="stylesheet" href="http://code.jquery.com/ui/1.11.0/themes/smoothness/jquery-ui.css">
+    <link rel="stylesheet" href="../static/css/dark-theme.css">
+    <link rel="stylesheet" href="../static/css/makeitresponsive.css">
+    <link rel="stylesheet" href="../static/css/spongemap.css" />
 
-    <script src="//code.jquery.com/jquery-1.10.2.js"></script>
-    <script src="//code.jquery.com/ui/1.11.0/jquery-ui.js"></script>
+    <script src="http://code.jquery.com/jquery-1.10.2.js"></script>
+    <script src="http://code.jquery.com/ui/1.11.0/jquery-ui.js"></script>
 
-    <script src="{{ STATIC_URL }}js/jquery.table-filter-0.2.2/jquery.table-filter.js"></script>
-    <script src="{{ STATIC_URL }}js/jquery.table-filter-0.2.2/jquery.table-filter.min.js"></script>
+    <script src="../static/js/jquery.table-filter-0.2.2/jquery.table-filter.js"></script>
+    <script src="../static/js/jquery.table-filter-0.2.2/jquery.table-filter.min.js"></script>
     <!--[if lte IE 8]>
     <link rel="stylesheet" href="http://libs.cartocdn.com/cartodb.js/v3/themes/css/cartodb.ie.css" />
     <![endif]-->
     <!--Switch between the different themes changing the stylesheet below - light-theme.css |dark-theme.css -->
 
     <!-- Table Sorter -->
-    <script src="{{ STATIC_URL }}js/tablesort/js/jquery.tablesorter.min.js"></script>
-    <script src="{{ STATIC_URL }}js/tablesort/js/jquery.tablesorter.widgets.min.js"></script>
+    <script src="../static/js/tablesort/js/jquery.tablesorter.min.js"></script>
+    <script src="../static/js/tablesort/js/jquery.tablesorter.widgets.min.js"></script>
 
 </head>
 <body>
@@ -41,6 +41,12 @@
             <li data="5">Informal Settlements</li>
             <li data="6">Schools</li>
         </ul>
+		<div class="searchBox">
+			<form>
+				<span><input type="text" id="searchTxt" placeholder="Search..."></span>
+				<span><input type="button" id="searchButton" onclick="searchFunction()" value="Search"></span>
+			</form>
+		</div>
     </div>
 
 
@@ -117,15 +123,25 @@ http://developers.cartodb.com/documentation/cartodb-js.html-->
         var adm4layer;
         var itslayer;
         var schoolslayer;
-        var itslayerurl = 'http://unhcr.cartodb.com/api/v2/viz/6d01148e-ebbe-11e3-8ccb-0e230854a1cb/viz.json';
-        var adm1layerurl = 'http://unhcr.cartodb.com/api/v2/viz/37b3bf66-ed76-11e3-abe6-0e230854a1cb/viz.json';
-        var adm2layerurl = 'http://unhcr.cartodb.com/api/v2/viz/80a4de6a-f2eb-11e3-aea2-0e230854a1cb/viz.json';
-        var adm3layerurl = 'http://unhcr.cartodb.com/api/v2/viz/2a7fe946-efe7-11e3-abb9-0e73339ffa50/viz.json';
-        var adm4layerurl = 'http://unhcr.cartodb.com/api/v2/viz/fbdd74de-f2eb-11e3-b154-0e10bcd91c2b/viz.json';
-        var schoolslayerurl = 'http://unhcr.cartodb.com/api/v2/viz/430d4bb0-face-11e3-ac1a-0e230854a1cb/viz.json';
+		var itslayerurl = 'http://unhcr.cartodb.com/api/v2/viz/e2ff49f4-4f9f-11e4-88a8-0e4fddd5de28/viz.json';
+		var adm1layerurl = 'http://unhcr.cartodb.com/api/v2/viz/37b3bf66-ed76-11e3-abe6-0e230854a1cb/viz.json';
+		var adm2layerurl = 'http://unhcr.cartodb.com/api/v2/viz/80a4de6a-f2eb-11e3-aea2-0e230854a1cb/viz.json';
+		var adm3layerurl = 'http://unhcr.cartodb.com/api/v2/viz/2a7fe946-efe7-11e3-abb9-0e73339ffa50/viz.json';
+		var adm4layerurl = 'http://unhcr.cartodb.com/api/v2/viz/46e8c810-4f9a-11e4-bbdf-0e4fddd5de28/viz.json'; 
+		var schoolslayerurl = 'http://unhcr.cartodb.com/api/v2/viz/430d4bb0-face-11e3-ac1a-0e230854a1cb/viz.json';
+
+		//used on search function
+		var layerOptions = {
+			query: "SELECT * FROM {{table_name}} order by st_ymax(the_geom) desc",
+		};
+		var layer;
+		//updated in createSelector used in searchFunction
+		var searchLayer;
+		
+		
         function createSelector(origin) {
 
-            var $options = $('#layer_selector li');
+		var $options = $('#layer_selector li');
             $options.click(function (e) {
                 // get the area of the selected layer
                 var $li = $(e.target);
@@ -142,6 +158,7 @@ http://developers.cartodb.com/documentation/cartodb-js.html-->
                         adm1on = 1;
                         adm1layer.show();
                         $li.addClass('selected');
+						searchLayer = adm1layerurl;
                     }
                     else if (area == '1' && adm1on == 1) {
                         $li.removeClass('selected');
@@ -157,6 +174,7 @@ http://developers.cartodb.com/documentation/cartodb-js.html-->
                         adm3on = 1;
                         adm3layer.show();
                         $li.addClass('selected');
+						searchLayer = adm3layerurl;
                     }
                     else if (area == '3' && adm3on == 1) {
                         //hide layer
@@ -171,6 +189,7 @@ http://developers.cartodb.com/documentation/cartodb-js.html-->
                         adm4on = 1;
                         adm4layer.show();
                         $li.addClass('selected');
+						searchLayer = adm4layerurl;
                     }
                     else if (area == '4' && adm4on == 1) {
                         //hide layer
@@ -186,6 +205,7 @@ http://developers.cartodb.com/documentation/cartodb-js.html-->
                         adm2on = 1;
                         adm2layer.show();
                         $li.addClass('selected');
+						searchLayer = adm2layerurl;
                     }
                     else if (area == '2' && adm2on == 1) {
                         //hide layer
@@ -202,6 +222,7 @@ http://developers.cartodb.com/documentation/cartodb-js.html-->
                         itson = 1;
                         itslayer.show();
                         $li.addClass('selected');
+						searchLayer = itslayerurl;
                     }
                     else if (area == '5' && itson == 1) {
                         //hide layer
@@ -216,6 +237,7 @@ http://developers.cartodb.com/documentation/cartodb-js.html-->
                         schoolon = 1;
                         schoolslayer.show();
                         $li.addClass('selected');
+						searchLayer = schoolslayerurl;
                     }
                     else if (area == '6' && schoolon == 1) {
                         //hide layer
@@ -230,6 +252,36 @@ http://developers.cartodb.com/documentation/cartodb-js.html-->
 
             });
         }
+
+		function processFormData() {
+			var input = document.getElementById('searchTxt').value;
+			return input;
+		}
+	
+	
+	
+		function searchFunction(){
+			var layerUrl = searchLayer;
+			var myVar = processFormData();
+
+			cartodb.createLayer(map, layerUrl, layerOptions).addTo(map)
+			.on('done', function(layer) {
+				layer1 = layer.getSubLayer(0);
+				layer1.hide();
+				//map.addLayer(layer1);
+				setTimeout(function() {
+					var sql = new cartodb.SQL({ user: 'unhcr' });
+					sql.getBounds("select * From sponge_lbn_ismasterlist where p_code like '%" + myVar + 
+					"%' or pcode_name like '%" + myVar + "%'").done(function(bounds) {
+						map.fitBounds(bounds)
+					});
+				}, 5000);
+
+			}).on('error', function() {
+		cartodb.log.log("some error occurred");
+			});
+		
+	}
 
         function clearMap() {
             for (i in map._layers) {
@@ -395,7 +447,7 @@ http://developers.cartodb.com/documentation/cartodb-js.html-->
         function Fetch(pcode, name) {
 
             $.ajax({
-                url: "/facts/?code=" + pcode,
+                url: "http://spongebase.org/facts/?code=" + pcode, //change later /facts/?code=
                 //dataType: "jsonp",
                 success: function (retdata, statuss) {
                     var marker_content = '\
